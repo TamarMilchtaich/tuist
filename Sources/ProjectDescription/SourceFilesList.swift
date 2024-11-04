@@ -65,16 +65,70 @@ extension SourceFileGlob: ExpressibleByStringInterpolation {
     }
 }
 
+/// A type that represents a source file.
+public struct SourceFile: Codable, Equatable, Sendable {
+    /// Source file path.
+    public var path: Path
+
+    /// Compiler flags
+    /// When source files are added to a target, they can contain compiler flags that Xcode's build system
+    /// passes to the compiler when compiling those files. By default none is passed.
+    public var compilerFlags: String?
+
+    /// Source file code generation attribute
+    public var codeGen: FileCodeGen?
+
+    /// Source file condition for platform filters
+    public var compilationCondition: PlatformCondition?
+
+    public init(
+        path: Path,
+        compilerFlags: String? = nil,
+        codeGen: FileCodeGen? = nil,
+        compilationCondition: PlatformCondition? = nil
+    ) {
+        self.path = path
+        self.compilerFlags = compilerFlags
+        self.codeGen = codeGen
+        self.compilationCondition = compilationCondition
+    }
+
+    public static func generated(
+        _ path: Path,
+        compilerFlags: String? = nil,
+        codeGen: FileCodeGen? = nil,
+        compilationCondition: PlatformCondition? = nil
+    ) -> Self {
+        return .init(
+            path: path,
+            compilerFlags: compilerFlags,
+            codeGen: codeGen,
+            compilationCondition: compilationCondition
+        )
+    }
+}
+
+extension SourceFile: ExpressibleByStringInterpolation {
+    public init(stringLiteral value: String) {
+        self.init(path: .path(value), compilerFlags: nil, codeGen: nil, compilationCondition: nil)
+    }
+}
+
 /// A collection of source file globs.
 public struct SourceFilesList: Codable, Equatable, Sendable {
     /// List glob patterns.
     public var globs: [SourceFileGlob]
 
+    public var generated: [SourceFile]
+
     /// Creates the source files list with the glob patterns.
     ///
     /// - Parameter globs: Glob patterns.
-    public static func sourceFilesList(globs: [SourceFileGlob]) -> Self {
-        self.init(globs: globs)
+    public static func sourceFilesList(
+        globs: [SourceFileGlob],
+        generated: [SourceFile] = []
+    ) -> Self {
+        self.init(globs: globs, generated: generated)
     }
 
     /// Creates the source files list with the glob patterns as strings.
@@ -84,10 +138,17 @@ public struct SourceFilesList: Codable, Equatable, Sendable {
         sourceFilesList(globs: globs.map(SourceFileGlob.init))
     }
 
+    /// Creates the source files list with the glob patterns as strings.
+    ///
+    /// - Parameter globs: Glob patterns.
+    public static func sourceFilesList(generated: [String]) -> Self {
+        sourceFilesList(globs: [], generated: generated.map(SourceFile.init))
+    }
+
     /// Returns a sources list from a list of paths.
     /// - Parameter paths: Source paths.
     public static func paths(_ paths: [Path]) -> SourceFilesList {
-        SourceFilesList(globs: paths.map { .glob($0) })
+        SourceFilesList(globs: paths.map { .glob($0) }, generated: [])
     }
 }
 
@@ -100,6 +161,6 @@ extension SourceFilesList: ExpressibleByStringInterpolation {
 
 extension SourceFilesList: ExpressibleByArrayLiteral {
     public init(arrayLiteral elements: SourceFileGlob...) {
-        self.init(globs: elements)
+        self.init(globs: elements, generated: [])
     }
 }

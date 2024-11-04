@@ -249,7 +249,7 @@ extension XcodeGraph.Target {
         var playgrounds: Set<AbsolutePath> = []
 
         // Sources
-        let allSources = try await XcodeGraph.Target.sources(
+        let globSources = try await XcodeGraph.Target.sources(
             targetName: targetName,
             sources: manifest.sources?.globs.map { glob in
                 let globPath = try generatorPaths.resolve(path: glob.glob).pathString
@@ -265,6 +265,21 @@ extension XcodeGraph.Target {
             } ?? [],
             fileSystem: fileSystem
         )
+
+        let generatedSources = try manifest.sources?.generated.map { generated in
+            let pathString = try generatorPaths.resolve(path: generated.path).pathString
+            let path = try AbsolutePath(validating: pathString)
+            let mappedCodeGen = generated.codeGen.map(XcodeGraph.FileCodeGen.from)
+
+            return XcodeGraph.SourceFile(
+                path: path,
+                compilerFlags: generated.compilerFlags,
+                codeGen: mappedCodeGen,
+                compilationCondition: generated.compilationCondition?.asGraphCondition
+            )
+        }
+
+        let allSources = globSources + (generatedSources ?? [])
 
         for sourceFile in allSources {
             if sourceFile.path.extension == "playground" {
