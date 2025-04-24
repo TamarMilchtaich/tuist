@@ -287,10 +287,10 @@ class TargetLinter: TargetLinting {
             if case let .xcframework(path, expectedSignature, _, _) = dependency, let expectedSignature {
                 let actualSignature = try await signatureProvider.signature(of: path)
                 if expectedSignature != actualSignature {
-                    let expectedString = expectedSignature.expectedSignature() ?? "nil"
-                    let actualString = actualSignature.expectedSignature() ?? "nil"
+                    let expectedString = expectedSignature.expectedSignature()
+                    let actualString = actualSignature.expectedSignature()
                     let issue = LintingIssue(
-                        reason: "Target '\(target.name)' has an XCFramwork dependency with unexpected signature at \(path.pathString). Expected signature: \(expectedString), actual signature: \(actualString)",
+                        reason: "The target '\(target.name)' depends on the XCFramework at \(path.pathString) and expects a signature \(String(describing: expectedString)) which doesn't match the actual signature \(String(describing: actualString))",
                         severity: .error
                     )
                     issues.append(issue)

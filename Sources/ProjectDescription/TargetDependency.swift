@@ -17,7 +17,7 @@ public enum XCFrameworkSignature: Equatable, Hashable, Codable, Sendable {
     case unsigned
 
     /// The XCFramework is signed with an Apple Development certificate.
-    case signedByApple(teamIdentifier: String, teamName: String)
+    case signedWithAppleCertificate(teamIdentifier: String, teamName: String)
 
     /// The XCFramework is signed by a self issued code signing identity.
     case selfSigned(fingerprint: String)

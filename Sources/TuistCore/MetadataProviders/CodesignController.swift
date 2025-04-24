@@ -13,7 +13,7 @@ public protocol CodesignControlling {
     func codesignExtractSignature(of xcframeworkPath: AbsolutePath, into directory: AbsolutePath) async throws
 }
 
-public final class CodesignController: CodesignControlling {
+public struct CodesignController: CodesignControlling {
     private let commandRunner: CommandRunning
 
     public init(commandRunner: CommandRunning = CommandRunner()) {
@@ -30,6 +30,7 @@ public final class CodesignController: CodesignControlling {
                 ]
             )
             .concatenatedString()
+            .trimmingCharacters(in: .whitespaces)
         } catch let error as CommandError {
             if case let .terminated(_, stdErr) = error, stdErr.contains("code object is not signed at all") {
                 return nil

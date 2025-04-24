@@ -8,25 +8,29 @@ import TuistSupport
 import XcodeGraph
 
 enum XCFrameworkSignatureProviderError: LocalizedError, Equatable {
-    case codesignOutputMissing
-    case certificateFileReadFailed
-    case appleSignedXCFrameworkMissingDetails(teamIdentifier: String?, teamName: String?)
+    case codesignOutputMissing(_ certificateFilePath: Path.AbsolutePath)
+    case certificateFileReadFailed(_ xcframeworkPath: Path.AbsolutePath)
+    case appleCertificateSignedXCFrameworkMissingDetails(
+        _ xcframeworkPath: Path.AbsolutePath,
+        teamIdentifier: String?,
+        teamName: String?
+    )
 
     var errorDescription: String {
         switch self {
-        case .codesignOutputMissing:
-            return "codesign finished, but no output file was found."
-        case .certificateFileReadFailed:
-            return "Failed to read certificate file."
-        case let .appleSignedXCFrameworkMissingDetails(teamIdentifier, teamName):
-            return "Apple signed XCFramework missing team identifier or name. teamIdentifier: \(teamIdentifier ?? "nil"), teamName: \(teamName ?? "nil")"
-        }
-    }
-
-    var type: TuistSupport.ErrorType {
-        switch self {
-        case .codesignOutputMissing, .certificateFileReadFailed, .appleSignedXCFrameworkMissingDetails:
-            return .abort
+        case let .codesignOutputMissing(path):
+            return "Couldn't find the codesign0 certificate for XCFramework at \(path)."
+        case let .certificateFileReadFailed(path):
+            return "Failed to read certificate file for XCFramework at \(path)."
+        case let .appleCertificateSignedXCFrameworkMissingDetails(path, teamIdentifier, teamName):
+            switch (teamIdentifier, teamName) {
+            case (nil, .some):
+                return "The framework at \(path) signed with an Apple certificate lacks the team identifier."
+            case (.some, nil):
+                return "The framework at \(path) signed with an Apple certificate lacks the team name."
+            default:
+                return "The framework at \(path) signed with an Apple certificate lacks the team identifier and name."
+            }
         }
     }
 }
@@ -47,7 +51,7 @@ public struct XCFrameworkSignatureProvider {
         self.codesignController = codesignController
     }
 
-    private static let signedByAppleString = "Authority=Apple Root CA"
+    private static let signedWithAppleCertificateString = "Authority=Apple Root CA"
     private static let teamNameRegExPattern = #"Authority=[^:]+?:\s*([^()]+)\s*\(([A-Z0-9]+)\)"#
     private static let teamIdentifierRegExPattern = #"TeamIdentifier=([A-Z0-9]+)"#
 
@@ -57,7 +61,7 @@ public struct XCFrameworkSignatureProvider {
             return .unsigned
         }
 
-        guard output.contains(Self.signedByAppleString) else {
+        guard output.contains(Self.signedWithAppleCertificateString) else {
             let fingerprint = try await extractFingerprint(from: xcframeworkPath)
             return .selfSigned(fingerprint: fingerprint)
         }
@@ -68,13 +72,14 @@ public struct XCFrameworkSignatureProvider {
             .trimmingCharacters(in: .whitespaces)
 
         guard let teamIdentifier, let teamName else {
-            throw XCFrameworkSignatureProviderError.appleSignedXCFrameworkMissingDetails(
+            throw XCFrameworkSignatureProviderError.appleCertificateSignedXCFrameworkMissingDetails(
+                xcframeworkPath,
                 teamIdentifier: teamIdentifier,
                 teamName: teamName
             )
         }
 
-        return .signedByApple(teamIdentifier: teamIdentifier, teamName: teamName)
+        return .signedWithAppleCertificate(teamIdentifier: teamIdentifier, teamName: teamName)
     }
 
     private func extractFingerprint(from xcframeworkPath: Path.AbsolutePath) async throws -> String {
@@ -83,11 +88,11 @@ public struct XCFrameworkSignatureProvider {
 
             let certFile: Path.AbsolutePath = temporaryPath.appending(component: "codesign0")
             guard try await fileSystem.exists(certFile) else {
-                throw XCFrameworkSignatureProviderError.codesignOutputMissing
+                throw XCFrameworkSignatureProviderError.codesignOutputMissing(certFile)
             }
 
             guard let certificateFileData = try? await fileSystem.readFile(at: certFile) else {
-                throw XCFrameworkSignatureProviderError.certificateFileReadFailed
+                throw XCFrameworkSignatureProviderError.certificateFileReadFailed(xcframeworkPath)
             }
 
             let hash = SHA256.hash(data: certificateFileData)

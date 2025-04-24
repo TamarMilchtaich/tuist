@@ -63,7 +63,7 @@ final class XCFrameworkSignatureProviderTests: TuistUnitTestCase {
         let result = try await subject.signature(of: path)
 
         // Then
-        XCTAssertEqual(result, .signedByApple(teamIdentifier: "U6LC622NKF", teamName: "Tuist GmbH"))
+        XCTAssertEqual(result, .signedWithAppleCertificate(teamIdentifier: "U6LC622NKF", teamName: "Tuist GmbH"))
     }
 
     func test_signature_selfSigned() async throws {

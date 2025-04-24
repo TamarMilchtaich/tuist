@@ -2,39 +2,31 @@ import Command
 import Foundation
 import Mockable
 import Path
+import Testing
 import TuistCore
+import TuistSupport
 import TuistSupportTesting
-import XCTest
 
 @testable import TuistCore
+@testable import TuistSupportTesting
 
-final class CodesignControllerTests: TuistUnitTestCase {
-    private var subject: CodesignController!
-    private var commandRunner: MockCommandRunning!
-    private var unsignedPath: AbsolutePath!
-    private var signedPath: AbsolutePath!
+@Suite struct CodesignControllerTests {
+    private let commandRunner = MockCommandRunning()
+    private let subject: CodesignController
+    private let unsignedPath: AbsolutePath
+    private let signedPath: AbsolutePath
 
-    override func setUp() {
-        super.setUp()
-        commandRunner = MockCommandRunning()
+    init() {
         subject = CodesignController(commandRunner: commandRunner)
-
-        unsignedPath = fixturePath(
+        unsignedPath = SwiftTestingHelper.fixturePath(
             path: try! RelativePath(validating: "MyFramework.xcframework")
         )
-        signedPath = fixturePath(
+        signedPath = SwiftTestingHelper.fixturePath(
             path: try! RelativePath(validating: "SignedXCFramework.xcframework")
         )
     }
 
-    override func tearDown() {
-        commandRunner = nil
-        subject = nil
-        super.tearDown()
-    }
-
-    func test_codesignSignature_returnsSignature() async throws {
-        // Given
+    @Test func test_codesignSignature_returnsSignature() async throws {
         let expected = "mockSignature"
         given(commandRunner)
             .run(
@@ -49,15 +41,11 @@ final class CodesignControllerTests: TuistUnitTestCase {
                 }
             )
 
-        // When
         let result = try await subject.codesignSignature(of: signedPath)
-
-        // Then
-        XCTAssertEqual(result, expected)
+        #expect(result == expected)
     }
 
-    func test_codesignSignature_returnsNilIfUnsigned() async throws {
-        // Given
+    @Test func test_codesignSignature_returnsNilIfUnsigned() async throws {
         let stderr = "code object is not signed at all"
         given(commandRunner)
             .run(
@@ -72,16 +60,13 @@ final class CodesignControllerTests: TuistUnitTestCase {
                 }
             )
 
-        // When
         let result = try await subject.codesignSignature(of: unsignedPath)
-
-        // Then
-        XCTAssertNil(result)
+        #expect(result == nil)
     }
 
-    func test_codesignSignature_throwsForOtherErrors() async throws {
-        // Given
+    @Test func test_codesignSignature_throwsForOtherErrors() async throws {
         let stderr = "some error"
+        let expectedCode: Int32 = 1
         given(commandRunner)
             .run(
                 arguments: .value(["/usr/bin/codesign", "-dvv", unsignedPath.pathString]),
@@ -91,21 +76,24 @@ final class CodesignControllerTests: TuistUnitTestCase {
             .willReturn(
                 AsyncThrowingStream { continuation in
                     continuation.yield(CommandEvent.standardOutput(Array(stderr.utf8)))
-                    continuation.finish(throwing: CommandError.terminated(1, stderr: stderr))
+                    continuation.finish(throwing: CommandError.terminated(expectedCode, stderr: stderr))
                 }
             )
 
-        // When / Then
-        await XCTAssertThrowsCommandErrorTerminated(
-            try await subject.codesignSignature(of: unsignedPath),
-            expectedCode: 1,
-            expectedStderr: stderr
-        )
+        await #expect {
+            try await subject.codesignSignature(of: unsignedPath)
+        } throws: { error in
+            if let terminated = error as? CommandError,
+               case let .terminated(actualCode, actualStderr) = terminated
+            {
+                return actualCode == 1 && actualStderr == stderr
+            }
+            return false
+        }
     }
 
-    func test_codesignExtractSignature_extractionSucceeds() async throws {
-        // Given
-        let outputDir = try temporaryPath()
+    @Test func test_codesignExtractSignature_extractionSucceeds() async throws {
+        let outputDir = try TemporaryDirectory(removeTreeOnDeinit: true).path
         given(commandRunner)
             .run(
                 arguments: .value([
@@ -123,13 +111,11 @@ final class CodesignControllerTests: TuistUnitTestCase {
                 }
             )
 
-        // When / Then
         try await subject.codesignExtractSignature(of: signedPath, into: outputDir)
     }
 
-    func test_codesignExtractSignature_extractionFails() async throws {
-        // Given
-        let outputDir = try temporaryPath()
+    @Test func test_codesignExtractSignature_extractionFails() async throws {
+        let outputDir = try TemporaryDirectory(removeTreeOnDeinit: true).path
         let stderr = "some error"
         let error = CommandError.terminated(1, stderr: stderr)
 
@@ -150,29 +136,15 @@ final class CodesignControllerTests: TuistUnitTestCase {
                 }
             )
 
-        // When / Then
-        await XCTAssertThrowsCommandErrorTerminated(
-            try await subject.codesignExtractSignature(of: unsignedPath, into: outputDir),
-            expectedCode: 1,
-            expectedStderr: stderr
-        )
-    }
-}
-
-func XCTAssertThrowsCommandErrorTerminated(
-    _ expression: @autoclosure () async throws -> some Any,
-    expectedCode: Int32,
-    expectedStderr: String,
-    file: StaticString = #file,
-    line: UInt = #line
-) async {
-    do {
-        _ = try await expression()
-        XCTFail("Expected CommandError.terminated to be thrown", file: file, line: line)
-    } catch let CommandError.terminated(code, stderr) {
-        XCTAssertEqual(code, expectedCode, file: file, line: line)
-        XCTAssertEqual(stderr, expectedStderr, file: file, line: line)
-    } catch {
-        XCTFail("Unexpected error: \(error)", file: file, line: line)
+        await #expect {
+            try await subject.codesignExtractSignature(of: unsignedPath, into: outputDir)
+        } throws: { error in
+            if let terminated = error as? CommandError,
+               case let .terminated(actualCode, actualStderr) = terminated
+            {
+                return actualCode == 1 && actualStderr == stderr
+            }
+            return false
+        }
     }
 }
