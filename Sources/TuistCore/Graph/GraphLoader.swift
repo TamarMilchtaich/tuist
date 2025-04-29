@@ -273,7 +273,7 @@ public final class GraphLoader: GraphLoading {
             macroPath: metadata.macroPath,
             swiftModules: metadata.swiftModules,
             moduleMaps: metadata.moduleMaps,
-            expectedSignature: metadata.expectedSignature?.expectedSignature()
+            expectedSignature: metadata.expectedSignature?.signatureString()
         ))
         cache.add(xcframework: xcframework, at: path)
         return xcframework

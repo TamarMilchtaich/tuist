@@ -17,7 +17,7 @@ let project = Project(
                 ),
                 .xcframework(
                     path: "App/XCFrameworks/SignedXCFramework.xcframework",
-                    expectedSignature: .signedByApple(
+                    expectedSignature: .signedWithAppleCertificate(
                         teamIdentifier: "U6LC622NKF",
                         teamName: "Tuist GmbH"
                     )

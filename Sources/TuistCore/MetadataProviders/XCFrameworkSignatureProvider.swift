@@ -57,7 +57,7 @@ public struct XCFrameworkSignatureProvider {
 
     /// Returns the signature of the XCFramework at the given `xcframeworkPath`.
     public func signature(of xcframeworkPath: Path.AbsolutePath) async throws -> XCFrameworkSignature {
-        guard let output = try await codesignController.codesignSignature(of: xcframeworkPath) else {
+        guard let output = try await codesignController.signature(of: xcframeworkPath) else {
             return .unsigned
         }
 
@@ -84,9 +84,9 @@ public struct XCFrameworkSignatureProvider {
 
     private func extractFingerprint(from xcframeworkPath: Path.AbsolutePath) async throws -> String {
         try await fileSystem.runInTemporaryDirectory(prefix: "xcframework-signature-extractor)") { temporaryPath in
-            try await codesignController.codesignExtractSignature(of: xcframeworkPath, into: temporaryPath)
+            try await codesignController.extractSignature(of: xcframeworkPath, into: temporaryPath)
 
-            let certFile: Path.AbsolutePath = temporaryPath.appending(component: "codesign0")
+            let certFile = temporaryPath.appending(component: "codesign0")
             guard try await fileSystem.exists(certFile) else {
                 throw XCFrameworkSignatureProviderError.codesignOutputMissing(certFile)
             }

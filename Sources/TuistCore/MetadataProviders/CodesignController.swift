@@ -7,10 +7,10 @@ import Path
 /// Utility to interact with the `codesign` CLI.
 public protocol CodesignControlling {
     /// Provides the signature of the XCFramework at the given `xcframeworkPath`, or `nil` if unsigned.
-    func codesignSignature(of xcframeworkPath: AbsolutePath) async throws -> String?
+    func signature(of xcframeworkPath: AbsolutePath) async throws -> String?
 
     /// Extracts the signature of the XCFramework at the given `xcframeworkPath` into the specified directory.
-    func codesignExtractSignature(of xcframeworkPath: AbsolutePath, into directory: AbsolutePath) async throws
+    func extractSignature(of xcframeworkPath: AbsolutePath, into directory: AbsolutePath) async throws
 }
 
 public struct CodesignController: CodesignControlling {
@@ -20,7 +20,7 @@ public struct CodesignController: CodesignControlling {
         self.commandRunner = commandRunner
     }
 
-    public func codesignSignature(of xcframeworkPath: AbsolutePath) async throws -> String? {
+    public func signature(of xcframeworkPath: AbsolutePath) async throws -> String? {
         do {
             return try await commandRunner.run(
                 arguments: [
@@ -40,7 +40,7 @@ public struct CodesignController: CodesignControlling {
         }
     }
 
-    public func codesignExtractSignature(
+    public func extractSignature(
         of xcframeworkPath: AbsolutePath,
         into directory: AbsolutePath
     ) async throws {

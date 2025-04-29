@@ -73,7 +73,7 @@ public final class XCFrameworkLoader: XCFrameworkLoading {
             macroPath: metadata.macroPath,
             swiftModules: metadata.swiftModules,
             moduleMaps: metadata.moduleMaps,
-            expectedSignature: metadata.expectedSignature?.expectedSignature()
+            expectedSignature: metadata.expectedSignature?.signatureString()
         )
         return .xcframework(xcframework)
     }

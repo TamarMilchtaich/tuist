@@ -110,6 +110,7 @@ public enum TuistAcceptanceFixtures {
     case appWithExecutableNonLocalDependencies
     case appWithGeneratedSources
     case appWithSignedXCFrameworkDependencies
+    case appWithSignedXCFrameworkDependenciesMismatchingSignature
     case custom(String)
 
     public var path: String {
@@ -332,6 +333,8 @@ public enum TuistAcceptanceFixtures {
             return "app_with_generated_sources"
         case .appWithSignedXCFrameworkDependencies:
             return "app_with_signed_xcframework_dependencies"
+        case .appWithSignedXCFrameworkDependenciesMismatchingSignature:
+            return "app_with_signed_xcframework_dependencies_mismatching_signature"
         case let .custom(path):
             return path
         }

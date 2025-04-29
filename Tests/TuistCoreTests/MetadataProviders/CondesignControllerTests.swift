@@ -26,7 +26,7 @@ import TuistSupportTesting
         )
     }
 
-    @Test func test_codesignSignature_returnsSignature() async throws {
+    @Test func test_signature_returnsSignature() async throws {
         let expected = "mockSignature"
         given(commandRunner)
             .run(
@@ -41,11 +41,11 @@ import TuistSupportTesting
                 }
             )
 
-        let result = try await subject.codesignSignature(of: signedPath)
+        let result = try await subject.signature(of: signedPath)
         #expect(result == expected)
     }
 
-    @Test func test_codesignSignature_returnsNilIfUnsigned() async throws {
+    @Test func test_signature_returnsNilIfUnsigned() async throws {
         let stderr = "code object is not signed at all"
         given(commandRunner)
             .run(
@@ -60,11 +60,11 @@ import TuistSupportTesting
                 }
             )
 
-        let result = try await subject.codesignSignature(of: unsignedPath)
+        let result = try await subject.signature(of: unsignedPath)
         #expect(result == nil)
     }
 
-    @Test func test_codesignSignature_throwsForOtherErrors() async throws {
+    @Test func test_signature_throwsForOtherErrors() async throws {
         let stderr = "some error"
         let expectedCode: Int32 = 1
         given(commandRunner)
@@ -81,7 +81,7 @@ import TuistSupportTesting
             )
 
         await #expect {
-            try await subject.codesignSignature(of: unsignedPath)
+            try await subject.signature(of: unsignedPath)
         } throws: { error in
             if let terminated = error as? CommandError,
                case let .terminated(actualCode, actualStderr) = terminated
@@ -92,7 +92,7 @@ import TuistSupportTesting
         }
     }
 
-    @Test func test_codesignExtractSignature_extractionSucceeds() async throws {
+    @Test func test_extractSignature_extractionSucceeds() async throws {
         let outputDir = try TemporaryDirectory(removeTreeOnDeinit: true).path
         given(commandRunner)
             .run(
@@ -111,10 +111,10 @@ import TuistSupportTesting
                 }
             )
 
-        try await subject.codesignExtractSignature(of: signedPath, into: outputDir)
+        try await subject.extractSignature(of: signedPath, into: outputDir)
     }
 
-    @Test func test_codesignExtractSignature_extractionFails() async throws {
+    @Test func test_extractSignature_extractionFails() async throws {
         let outputDir = try TemporaryDirectory(removeTreeOnDeinit: true).path
         let stderr = "some error"
         let error = CommandError.terminated(1, stderr: stderr)
@@ -137,7 +137,7 @@ import TuistSupportTesting
             )
 
         await #expect {
-            try await subject.codesignExtractSignature(of: unsignedPath, into: outputDir)
+            try await subject.extractSignature(of: unsignedPath, into: outputDir)
         } throws: { error in
             if let terminated = error as? CommandError,
                case let .terminated(actualCode, actualStderr) = terminated

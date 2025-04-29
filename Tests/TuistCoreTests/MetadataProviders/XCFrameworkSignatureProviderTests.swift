@@ -35,7 +35,7 @@ final class XCFrameworkSignatureProviderTests: TuistUnitTestCase {
     func test_signature_unsigned() async throws {
         // Given
         given(codesignController)
-            .codesignSignature(of: .value(path))
+            .signature(of: .value(path))
             .willReturn(nil)
 
         // When
@@ -56,7 +56,7 @@ final class XCFrameworkSignatureProviderTests: TuistUnitTestCase {
         """
 
         given(codesignController)
-            .codesignSignature(of: .value(path))
+            .signature(of: .value(path))
             .willReturn(codesignOutput)
 
         // When
@@ -83,11 +83,11 @@ final class XCFrameworkSignatureProviderTests: TuistUnitTestCase {
         )
 
         given(codesignController)
-            .codesignSignature(of: .value(selfSignedPath))
+            .signature(of: .value(selfSignedPath))
             .willReturn("Authority=Tuist Test Example")
 
         given(codesignController)
-            .codesignExtractSignature(of: .value(selfSignedPath), into: .any)
+            .extractSignature(of: .value(selfSignedPath), into: .any)
             .willProduce { _, _ in
                 mockFileSystem.certificateExtractionCallDone()
             }

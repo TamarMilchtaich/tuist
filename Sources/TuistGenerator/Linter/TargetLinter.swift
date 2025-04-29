@@ -287,10 +287,13 @@ class TargetLinter: TargetLinting {
             if case let .xcframework(path, expectedSignature, _, _) = dependency, let expectedSignature {
                 let actualSignature = try await signatureProvider.signature(of: path)
                 if expectedSignature != actualSignature {
-                    let expectedString = expectedSignature.expectedSignature()
-                    let actualString = actualSignature.expectedSignature()
                     let issue = LintingIssue(
-                        reason: "The target '\(target.name)' depends on the XCFramework at \(path.pathString) and expects a signature \(String(describing: expectedString)) which doesn't match the actual signature \(String(describing: actualString))",
+                        reason: signatureMismatchReason(
+                            targetName: target.name,
+                            pathString: path.pathString,
+                            expectedSignature: expectedSignature,
+                            actualSignature: actualSignature
+                        ),
                         severity: .error
                     )
                     issues.append(issue)
@@ -299,6 +302,37 @@ class TargetLinter: TargetLinting {
         }
 
         return issues
+    }
+
+    private func signatureMismatchReason(
+        targetName: String,
+        pathString: String,
+        expectedSignature: XCFrameworkSignature,
+        actualSignature: XCFrameworkSignature
+    ) -> String {
+        let expectedString = expectedSignature.signatureString() ?? "nil"
+        let actualString = actualSignature.signatureString() ?? "nil"
+
+        let baseReason =
+            """
+            The target '\(targetName)' depends on the XCFramework at \(pathString), 
+            expecting signature \(expectedString), but found \(actualString).
+
+            Ensure that the expected signature format is correct and that the XCFramework is authentic.
+            """
+
+        let specificReason: String
+        switch expectedSignature {
+        case .unsigned:
+            specificReason = "unsigned XCFrameworks should not have any signature."
+        case .signedWithAppleCertificate:
+            specificReason =
+                "XCFrameworks signed with Apple Developer certificates must have the format: `AppleDeveloperProgram:<team identifier>:<team name>`."
+        case .selfSigned:
+            specificReason = "self signed XCFrameworks must have the format: `SelfSigned:<sha256 fingerprint>`."
+        }
+
+        return baseReason + "\nSpecifically, " + specificReason
     }
 
     private func lintValidSourceFileCodeGenAttributes(target: Target) -> [LintingIssue] {
